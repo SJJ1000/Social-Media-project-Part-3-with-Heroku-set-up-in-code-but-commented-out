@@ -1,0 +1,19 @@
+{% extends "feed/base.html" %}
+{% block content %}
+  <h1>Social Feed</h1>
+  {% if posts %}
+    {% for p in posts %}
+      <div class="post">
+        <div class="meta">
+          {{ p.date_posted|date:"Y-m-d H:i" }} — {{ p.username.username }}
+        </div>
+        <div>{{ p.description }}</div>
+        {% if p.image %}
+          <img src="{{ p.image.url }}" alt="post image" />
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No posts yet. Use “Create Post”.</p>
+  {% endif %}
+{% endblock %}
