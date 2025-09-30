@@ -1,0 +1,50 @@
+{% extends "feed/base.html" %}
+{% load static %}
+
+{% block content %}
+  <h1>Log in</h1>
+
+  {% if form.errors %}
+    <div style="color:#b00; margin-bottom:1rem;">
+      Please correct the error{% if form.errors|length > 1 %}s{% endif %} below.
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    <p>
+      <label for="id_username">Username</label><br>
+      <input type="text" name="username" id="id_username" required autofocus />
+    </p>
+    <p>
+      <label for="id_password">Password</label><br>
+      <input type="password" name="password" id="id_password" required />
+    </p>
+
+    {# If Django sent a ?next=/some/url keep it #}
+    {% if next %}
+      <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
+
+    <button type="submit">Log in</button>
+  </form>
+
+  <hr>
+
+  <p>Don’t have an account? <a href="{% url 'feed:register' %}">Register</a></p>
+
+  <h3 style="margin-top:2rem;">Or log in as a demo user</h3>
+  <p>
+    
+    <a href="{% url 'feed:demo_login' 'JohnDoe' %}" class="btn">JohnDoe</a>
+    <a href="{% url 'feed:demo_login' 'JaneDoe' %}" class="btn">JaneDoe</a>
+    <a href="{% url 'feed:demo_login' 'AlexSmith' %}" class="btn">AlexSmith</a>
+  </p>
+
+  <style>
+    .btn {
+      display:inline-block; padding:0.5rem 0.9rem; border:1px solid #333;
+      border-radius:8px; text-decoration:none; margin-right:0.5rem;
+    }
+  </style>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "feed/base.html" %}
+{% block content %}
+
+<h2>My Friends</h2>
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>Username</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Member Since</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if friends %}
+      {% for f in friends %}
+      <tr>
+        <td>{{ f.user.username }}</td>
+        <td>{{ f.first_name }}</td>
+        <td>{{ f.last_name }}</td>
+        <td>{{ f.email }}</td>
+        <td>{{ f.user.date_joined|date:"F d, Y, g:i a" }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr><td colspan="5">No friends yet.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<br>
+
+<h2>Friend Requests sent</h2>
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>Username</th><th>First Name</th><th>Last Name</th><th>Date Sent</th><th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if sent %}
+      {% for r in sent %}
+      <tr>
+        <td>{{ r.receiver.user.username }}</td>
+        <td>{{ r.receiver.first_name }}</td>
+        <td>{{ r.receiver.last_name }}</td>
+        <td>{{ r.date_added|date:"F d, Y, g:i a" }}</td>
+        <td>{{ r.status }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr><td colspan="5">You haven't sent any requests.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<br>
+
+<h2>Send a Friend Request</h2>
+<form method="post" action="{% url 'feed:send_request_post' %}" style="margin-bottom:1rem;">
+  {% csrf_token %}
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr><th>Users</th><th>First Name</th><th>Last Name</th><th>Request</th></tr>
+    </thead>
+    <tbody>
+      {% if candidates %}
+        {% for c in candidates %}
+        <tr>
+          <td>{{ c.user.username }}</td>
+          <td>{{ c.first_name }}</td>
+          <td>{{ c.last_name }}</td>
+          <td style="text-align:center;">
+            <input type="checkbox" name="selected_profiles" value="{{ c.id }}">
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="4">No available users to request.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <p style="margin-top:0.8rem;">
+    <button type="submit" class="btn btn-outline-primary">Send Request</button>
+  </p>
+</form>
+
+<br>
+
+<h2>Friend Request received</h2>
+<form method="post" action="{% url 'feed:approve_requests' %}">
+  {% csrf_token %}
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr><th>Users</th><th>First Name</th><th>Last Name</th><th>Request</th></tr>
+    </thead>
+    <tbody>
+      {% if received %}
+        {% for r in received %}
+        <tr>
+          <td>{{ r.sender.user.username }}</td>
+          <td>{{ r.sender.first_name }}</td>
+          <td>{{ r.sender.last_name }}</td>
+          <td style="text-align:center;">
+            <input type="checkbox" name="approve_ids" value="{{ r.id }}">
+            <!-- If you also want a per-row button, keep this:
+            <a href="{% url 'feed:approve_request' r.id %}" class="btn btn-sm btn-outline-primary">Approve</a>
+            -->
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="4">No incoming requests.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <p style="margin-top:0.8rem;">
+    <button type="submit" class="btn btn-outline-primary">Approve Request</button>
+  </p>
+</form>
+
+{% endblock %}
