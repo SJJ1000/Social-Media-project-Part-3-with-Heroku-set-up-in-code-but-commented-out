@@ -1,0 +1,40 @@
+{% extends "feed/base.html" %}
+{% block content %}
+  <h2>Post</h2>
+  <div class="post">
+    <div class="meta">
+      {{ post.date_posted|date:"F d, Y, g:i a" }} — {{ post.username.username }}
+    </div>
+    <div><strong>{{ post.description }}</strong></div>
+    {% if post.image %}
+      <img src="{{ post.image.url }}" alt="post image" />
+    {% endif %}
+  </div>
+
+  <h3 style="margin-top:1rem;">Comments ({{ comments|length }})</h3>
+
+  {% if comments %}
+    <ul>
+      {% for c in comments %}
+        <li>
+          <strong>{{ c.username.username }}</strong> — {{ c.date_added|date:"F d, Y, g:i a" }}<br>
+          {{ c.text }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No comments yet.</p>
+  {% endif %}
+
+  {% if user.is_authenticated %}
+    <hr>
+    <h4>Add a comment</h4>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-outline-primary">Submit</button>
+    </form>
+  {% else %}
+    <p><a href="{% url 'login' %}">Log in</a> to comment.</p>
+  {% endif %}
+{% endblock %}

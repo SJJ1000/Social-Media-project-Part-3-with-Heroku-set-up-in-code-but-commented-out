@@ -1,0 +1,31 @@
+{% extends "feed/base.html" %}
+{% block content %}
+  <h1>My Posts</h1>
+  <p><a class="btn btn-outline-primary" href="{% url 'feed:create_post' %}">Add a new post</a></p>
+
+  {% if posts %}
+    {% for p in posts %}
+      <div class="post">
+        <div class="meta">
+          {{ p.date_posted|date:"F d, Y, g:i a" }} — {{ p.username.username }}
+        </div>
+
+        <div><strong>{{ p.description }}</strong></div>
+
+        {% if p.image %}
+          <img src="{{ p.image.url }}" alt="post image" />
+        {% endif %}
+
+        <div style="border-top:1px solid #ddd; margin-top:.5rem; padding-top:.5rem;">
+          <span>Likes: {{ p.likes.count }}</span>
+          <span style="margin-left:2rem;">
+            Comments:
+            <a href="{% url 'feed:post_detail' p.id %}">{{ p.comment_set.count }}</a>
+          </span>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>You haven’t posted yet. <a href="{% url 'feed:create_post' %}">Create one</a>.</p>
+  {% endif %}
+{% endblock %}
