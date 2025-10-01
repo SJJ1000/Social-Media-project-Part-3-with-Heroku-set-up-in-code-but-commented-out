@@ -5,3 +5,7 @@ create environment then:
  python manage.py makemigrations, 
  python manage.py migrate, 
  python manage.py runserver
+
+
+
+If you do have problems you may need to delete browsing data (history, cookies, cache, and more) for the site to run. 
