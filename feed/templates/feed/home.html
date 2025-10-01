@@ -3,11 +3,8 @@
   <h1>Feed</h1>
   <p class="lead">A Social Network where you can be you.</p>
 
-  <!-- Join Now button now points to login -->
-  <a class="btn btn-lg btn-outline-primary"
-     href="{% url 'login' %}" 
-     role="button">
-     Join Now &raquo;
+  <a class="btn btn-lg btn-outline-primary" href="{% url 'login' %}" role="button">
+    Join Now &raquo;
   </a>
 
   <hr>
@@ -18,9 +15,19 @@
         <div class="meta">
           {{ p.date_posted|date:"Y-m-d H:i" }} — {{ p.username.username }}
         </div>
+
         <div>{{ p.description }}</div>
+
         {% if p.image %}
           <img src="{{ p.image.url }}" alt="post image" />
+        {% endif %}
+
+        {% if user.is_authenticated and user == p.username %}
+          <p style="margin-top:.5rem;">
+            <a href="{% url 'feed:delete_post' p.id %}" class="btn btn-sm btn-outline-danger">
+              Delete
+            </a>
+          </p>
         {% endif %}
       </div>
     {% endfor %}
@@ -28,11 +35,3 @@
     <p>No posts yet. Use “Create Post”.</p>
   {% endif %}
 {% endblock %}
-
-{% if user == p.username %}
-  <p>
-    <a href="{% url 'feed:delete_post' p.id %}" class="btn btn-sm btn-outline-danger">
-      Delete
-    </a>
-  </p>
-{% endif %}

@@ -1,9 +1,14 @@
 {% extends "feed/base.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-  <h2>My Profile</h2>
-  <form method="post">
+  <h1>My Profile</h1>
+
+  <form action="{% url 'feed:my_profile' %}" method="post" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
+    {{ form|crispy }}
+    <br>
+    <button type="submit" class="btn btn-outline-primary">Update</button>
   </form>
 {% endblock %}
+

@@ -2,32 +2,30 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load .env for local dev; Heroku uses Config Vars
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- Environment flags ---
-IS_HEROKU = bool(os.environ.get("DYNO") or os.environ.get("HEROKU_APP_NAME"))
-# Only set this to 1 if you truly want to force HTTPS locally (usually NO)
-FORCE_HTTPS = os.environ.get("FORCE_HTTPS", "0") == "1"
+# --------------------------------------------------------
+# Local defaults (Heroku code kept below but COMMENTED OUT)
+# --------------------------------------------------------
 
-# Security / Debug
+# # Heroku detection (COMMENTED OUT)
+# IS_HEROKU = bool(os.environ.get("DYNO") or os.environ.get("HEROKU_APP_NAME"))
+# FORCE_HTTPS = os.environ.get("FORCE_HTTPS", "0") == "1"
+# HEROKU_APP_NAME = os.environ.get("HEROKU_APP_NAME")
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-unsafe-secret-key-change-me")
-DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1" 
 
-ALLOWED_HOSTS = os.environ.get(
-    "ALLOWED_HOSTS",
-    "localhost,127.0.0.1"
-).split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
-# CSRF trusted origins (Heroku)
-HEROKU_APP_NAME = os.environ.get("HEROKU_APP_NAME")
-CSRF_TRUSTED_ORIGINS = []
-if HEROKU_APP_NAME:
-    CSRF_TRUSTED_ORIGINS.append(f"https://{HEROKU_APP_NAME}.herokuapp.com")
+# # CSRF trusted origins for Heroku (COMMENTED OUT)
+# CSRF_TRUSTED_ORIGINS = []
+# if HEROKU_APP_NAME:
+#     CSRF_TRUSTED_ORIGINS.append(f"https://{HEROKU_APP_NAME}.herokuapp.com")
 
-# Apps
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -36,7 +34,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "feed",
-
     "crispy_forms",
     "crispy_bootstrap5",
 ]
@@ -44,10 +41,12 @@ INSTALLED_APPS = [
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # serves static files in prod
+
+    # # Whitenoise for prod (COMMENTED OUT for local-only)
+    # "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -58,11 +57,10 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "FeedProject.urls"
 
-# Templates
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # keep your project-level templates dir
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -75,24 +73,22 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "FeedProject.wsgi.application"
+ASGI_APPLICATION = "FeedProject.asgi.application"
 
-# Database: default SQLite; auto-switch to DATABASE_URL (Heroku)
+# ---------- Database (LOCAL: SQLite only) ----------
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
 }
 
-if os.environ.get("DATABASE_URL"):
-    import dj_database_url
-    DATABASES["default"] = dj_database_url.config(
-        conn_max_age=600,
-        ssl_require=True,
-        default=os.environ["DATABASE_URL"],
-    )
+# # Heroku DATABASE_URL override (COMMENTED OUT)
+# if os.environ.get("DATABASE_URL"):
+#     import dj_database_url
+#     DATABASES["default"] = dj_database_url.config(
+#         conn_max_age=600,
+#         ssl_require=True,
+#         default=os.environ["DATABASE_URL"],
+#     )
 
-# Password validators
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -100,43 +96,42 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# I18N / TZ
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.environ.get("TIME_ZONE", "America/Chicago")
 USE_I18N = True
 USE_TZ = True
 
-# Static / Media
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"  # for collectstatic on Heroku
+STATIC_ROOT = BASE_DIR / "staticfiles"  # harmless locally
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
-
-STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
-}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# # Whitenoise storages (COMMENTED OUT)
+# STORAGES = {
+#     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+#     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+# }
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Auth redirects
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
-# --- Security / HTTPS toggles (safe for local dev) ---
-# Heroku (or any reverse proxy) sets X-Forwarded-Proto
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# ---------- HTTPS settings (LOCAL: always HTTP) ----------
+SECURE_PROXY_SSL_HEADER = None
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
-# Only force HTTPS when NOT in DEBUG.
-# This prevents local http://127.0.0.1:8000 from being redirected to https.
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-else:
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-
+# # Heroku proxy/header & conditional HTTPS (COMMENTED OUT)
+# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# if not DEBUG:
+#     SECURE_SSL_REDIRECT = True
+#     SESSION_COOKIE_SECURE = True
+#     CSRF_COOKIE_SECURE = True
+# else:
+#     SECURE_SSL_REDIRECT = False
+#     SESSION_COOKIE_SECURE = False
+#     CSRF_COOKIE_SECURE = False
