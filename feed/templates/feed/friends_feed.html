@@ -1,0 +1,49 @@
+{% extends "feed/base.html" %}
+{% block content %}
+  <h1>Friends Feed</h1>
+  <p class="lead">Posts from people you’re friends with.</p>
+  <hr>
+
+  {% if posts %}
+    {% for p in posts %}
+      <div class="post">
+        <div class="meta">
+          {{ p.date_posted|date:"Y-m-d H:i" }} — {{ p.username.username }}
+        </div>
+
+        <div>{{ p.description }}</div>
+
+        {% if p.image %}
+          <img src="{{ p.image.url }}" alt="post image" />
+        {% endif %}
+
+        
+        <div style="margin-top:0.5rem;">
+          {% if p.id in liked_ids %}
+            <form method="post" action="{% url 'feed:unlike_post' p.id %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit">Unlike</button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'feed:like_post' p.id %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit">Like</button>
+            </form>
+          {% endif %}
+          <a href="{% url 'feed:post_detail' p.id %}" style="margin-left:0.75rem;">View details & comments</a>
+        </div>
+
+       
+        {% if request.user.is_authenticated %}
+          <form method="post" action="{% url 'feed:add_comment' p.id %}" style="margin-top:0.75rem;">
+            {% csrf_token %}
+            <input type="text" name="text" placeholder="Write a comment…" required style="width:70%;" />
+            <button type="submit">Comment</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No posts from friends yet.</p>
+  {% endif %}
+{% endblock %}

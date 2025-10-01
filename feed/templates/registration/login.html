@@ -4,29 +4,46 @@
 {% block content %}
   <h1>Log in</h1>
 
+  {# Show any form errors clearly #}
+  {% if form.non_field_errors %}
+    <div style="color:#b00; margin-bottom:1rem;">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
   {% if form.errors %}
     <div style="color:#b00; margin-bottom:1rem;">
       Please correct the error{% if form.errors|length > 1 %}s{% endif %} below.
     </div>
   {% endif %}
 
-  <form method="post" action="{% url 'login' %}">
+  <form method="post" action="{% url 'login' %}" novalidate>
     {% csrf_token %}
+
     <p>
       <label for="id_username">Username</label><br>
-      <input type="text" name="username" id="id_username" required autofocus />
-    </p>
-    <p>
-      <label for="id_password">Password</label><br>
-      <input type="password" name="password" id="id_password" required />
+      <input type="text" name="username" id="id_username" required autofocus
+             autocomplete="username"
+             value="{{ form.username.value|default:'' }}">
+      {% if form.username.errors %}
+        <br><small style="color:#b00">{{ form.username.errors|join:", " }}</small>
+      {% endif %}
     </p>
 
-    {# If Django sent a ?next=/some/url keep it #}
+    <p>
+      <label for="id_password">Password</label><br>
+      <input type="password" name="password" id="id_password" required autocomplete="current-password">
+      {% if form.password.errors %}
+        <br><small style="color:#b00">{{ form.password.errors|join:", " }}</small>
+      {% endif %}
+    </p>
+
+    {# Keep ?next=/some/path if present so user returns to where they came from #}
     {% if next %}
       <input type="hidden" name="next" value="{{ next }}">
     {% endif %}
 
-    <button type="submit">Log in</button>
+    <button type="submit" class="btn btn-primary">Log in</button>
+    <a href="{% url 'password_reset' %}" class="link">Forgot password?</a>
   </form>
 
   <hr>
@@ -35,7 +52,6 @@
 
   <h3 style="margin-top:2rem;">Or log in as a demo user</h3>
   <p>
-    
     <a href="{% url 'feed:demo_login' 'JohnDoe' %}" class="btn">JohnDoe</a>
     <a href="{% url 'feed:demo_login' 'JaneDoe' %}" class="btn">JaneDoe</a>
     <a href="{% url 'feed:demo_login' 'AlexSmith' %}" class="btn">AlexSmith</a>
@@ -46,5 +62,8 @@
       display:inline-block; padding:0.5rem 0.9rem; border:1px solid #333;
       border-radius:8px; text-decoration:none; margin-right:0.5rem;
     }
+    .btn-primary { background:#0d6efd; border-color:#0d6efd; color:#fff; }
+    .btn-primary:hover { opacity:.9; }
+    .link { margin-left: .75rem; }
   </style>
 {% endblock %}

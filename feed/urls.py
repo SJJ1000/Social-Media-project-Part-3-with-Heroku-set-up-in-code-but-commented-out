@@ -6,8 +6,10 @@ app_name = "feed"
 urlpatterns = [
     path("", views.home, name="home"),
     path("my-feed/", views.my_feed, name="my_feed"),
+    path("friends-feed/", views.friends_feed, name="friends_feed"),
     path("create-post/", views.create_post, name="create_post"),
     path("post/<int:post_id>/", views.post_detail, name="post_detail"),
+    path("post/<int:post_id>/comment/", views.add_comment, name="add_comment"),
     path("delete-post/<int:post_id>/", views.delete_post, name="delete_post"),
 
     

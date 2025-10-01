@@ -4,12 +4,10 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db.models import Q
 from django.contrib.auth.models import User
-from django.contrib.auth import login as auth_login
-from django.contrib.auth import authenticate, login 
+from django.contrib.auth import login as auth_login, authenticate, login
 
 from .models import Post, Profile, Relationship, Like
-from .forms import PostForm, ProfileForm, RelationshipForm, RegisterForm
-
+from .forms import PostForm, ProfileForm, RelationshipForm, RegisterForm, CommentForm
 
 # ----------------------------
 # Core feed pages
@@ -33,7 +31,7 @@ def create_post(request):
         form = PostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)
-            post.username = request.user  
+            post.username = request.user
             post.save()
             return redirect("feed:home")
     else:
@@ -71,18 +69,46 @@ def my_feed(request):
     )
     return render(request, "feed/my_feed.html", {"posts": posts, "liked_ids": liked_ids})
 
+# Friends feed
+@login_required
+def friends_feed(request):
+    me = Profile.objects.select_related("user").get(user=request.user)
+
+    accepted = Relationship.objects.filter(
+        status='accepted'
+    ).filter(
+        Q(sender=me) | Q(receiver=me)
+    ).select_related('sender__user', 'receiver__user')
+
+    friend_users = []
+    for r in accepted:
+        friend_profile = r.receiver if r.sender_id == me.id else r.sender
+        friend_users.append(friend_profile.user)
+
+    posts = (
+        Post.objects
+        .select_related("username")
+        .filter(username__in=friend_users)
+        .order_by("-date_posted")
+    )
+
+    liked_ids = set(
+        Like.objects.filter(user=request.user, post__in=posts)
+        .values_list("post_id", flat=True)
+    )
+
+    return render(request, "feed/friends_feed.html", {
+        "posts": posts,
+        "liked_ids": liked_ids
+    })
+
 
 def post_detail(request, post_id):
-    """
-    Show a single post, its comments, and a form to add a comment.
-    Anyone can view; only logged-in users can submit.
-    """
     post = get_object_or_404(Post.objects.select_related("username"), id=post_id)
     comments = post.comment_set.select_related("username").order_by("-date_added")
 
     form = None
     if request.user.is_authenticated:
-        from .forms import CommentForm
         if request.method == "POST":
             form = CommentForm(request.POST)
             if form.is_valid():
@@ -97,6 +123,17 @@ def post_detail(request, post_id):
     context = {"post": post, "comments": comments, "form": form}
     return render(request, "feed/post_detail.html", context)
 
+@login_required
+def add_comment(request, post_id):
+    if request.method == "POST":
+        post = get_object_or_404(Post, id=post_id)
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            c = form.save(commit=False)
+            c.post = post
+            c.username = request.user
+            c.save()
+    return redirect(request.META.get("HTTP_REFERER") or reverse("feed:home"))
 
 @login_required
 def delete_post(request, post_id):
@@ -106,23 +143,42 @@ def delete_post(request, post_id):
         return redirect("feed:home")
     return render(request, "feed/delete_post.html", {"post": post})
 
-
 # ----------------------------
-# Register new users
+# Public registration (creates a Profile)
 # ----------------------------
 def register(request):
     if request.method == "POST":
         form = RegisterForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            # auto-create Profile
-            Profile.objects.get_or_create(user=user, defaults={"email": user.email})
+            user = form.save()  
+            
+            Profile.objects.get_or_create(
+                user=user,
+                defaults={
+                    "first_name": form.cleaned_data.get("first_name", "") or "",
+                    "last_name": form.cleaned_data.get("last_name", "") or "",
+                    "email": form.cleaned_data.get("email", "") or "",
+                },
+            )
             auth_login(request, user)
             return redirect("feed:home")
     else:
         form = RegisterForm()
     return render(request, "feed/register.html", {"form": form})
 
+
+def demo_login(request, username):
+    try:
+        u = User.objects.get(username=username)
+    except User.DoesNotExist:
+        u = User.objects.create_user(username=username, password="demo123!", email=f"{username.lower()}@example.com")
+        Profile.objects.get_or_create(user=u, defaults={"first_name": username, "last_name": "Demo", "email": u.email})
+
+    user = authenticate(request, username=username, password="demo123!")
+    if user is not None:
+        login(request, user)
+        return redirect("feed:home")
+    return redirect("login")
 
 # ----------------------------
 # Likes
@@ -144,9 +200,6 @@ def unlike_post(request, post_id):
     return redirect(_back(request))
 
 
-# ----------------------------
-# Friend requests (demo users + send/approve)
-# ----------------------------
 DEMO_USERS = [
     {"username": "JohnDoe",  "first_name": "John",  "last_name": "Doe",  "email": "john@example.com"},
     {"username": "JaneDoe",  "first_name": "Jane",  "last_name": "Doe",  "email": "jane@example.com"},
@@ -154,7 +207,6 @@ DEMO_USERS = [
 ]
 
 def _ensure_demo_users():
-    """Create three demo accounts (once). Password: demo123!"""
     for s in DEMO_USERS:
         u, created = User.objects.get_or_create(
             username=s["username"],
@@ -173,7 +225,6 @@ def _ensure_demo_users():
         )
 
 def _seed_incoming_requests(me: Profile):
-    """Make demo users send me a pending request unless a relationship already exists."""
     demos = Profile.objects.filter(user__username__in=[d["username"] for d in DEMO_USERS]).exclude(id=me.id)
     for demo in demos:
         already = Relationship.objects.filter(
@@ -184,13 +235,6 @@ def _seed_incoming_requests(me: Profile):
 
 @login_required
 def friend_requests(request):
-    """
-    Page with:
-      - friends (accepted)
-      - sent (pending I sent)
-      - received (pending to me)
-      - candidates (people to send to)
-    """
     _ensure_demo_users()
     me = Profile.objects.get(user=request.user)
     _seed_incoming_requests(me)
@@ -205,7 +249,6 @@ def friend_requests(request):
     sent = Relationship.objects.filter(sender=me, status='sent').select_related('receiver__user')
     received = Relationship.objects.filter(receiver=me, status='sent').select_related('sender__user')
 
-    # can't send to myself or anyone already related either way
     related_ids = {me.id}
     for r in Relationship.objects.filter(Q(sender=me) | Q(receiver=me)).only('sender_id','receiver_id'):
         related_ids.add(r.sender_id); related_ids.add(r.receiver_id)
@@ -221,12 +264,6 @@ def friend_requests(request):
 
 @login_required
 def send_friend_request(request, profile_id=None):
-    """
-    Send requests via:
-      - POST with checkboxes: name='selected_profiles'
-      - POST with 'profile_id' or 'username'
-      - Legacy GET/POST /send/<profile_id>/
-    """
     me = Profile.objects.get(user=request.user)
     if request.method == "POST":
         selected = request.POST.getlist("selected_profiles")
@@ -259,47 +296,27 @@ def send_friend_request(request, profile_id=None):
 
 @login_required
 def approve_friend_request(request, rel_id=None):
-    """
-    Approve incoming requests.
-
-    - POST (bulk) with checkboxes named 'approve_ids'
-    - or GET/POST /friend-requests/approve/<rel_id>/ for a single row
-    """
     me = Profile.objects.get(user=request.user)
+
+    def _accept(r: Relationship):
+        r.status = "accepted"
+        r.save()
+        other = r.sender if r.receiver_id == me.id else r.receiver
+        me.friends.add(other.user)
+        other.friends.add(me.user)
 
     if request.method == "POST":
         ids = request.POST.getlist("approve_ids")
         if ids:
             for r in Relationship.objects.filter(id__in=ids, receiver=me, status="sent"):
-                r.status = "accepted"
-                r.save()
+                _accept(r)
             return redirect("feed:friend_requests")
 
     if rel_id is not None:
         r = get_object_or_404(Relationship, id=rel_id, receiver=me, status="sent")
-        r.status = "accepted"
-        r.save()
+        _accept(r)
     return redirect("feed:friend_requests")
-
-
 
 @login_required
 def relationship_view(request):
     return redirect("feed:friend_requests")
-
-
-def demo_login(request, username):
-    
-    try:
-        u = User.objects.get(username=username)
-    except User.DoesNotExist:
-        
-        u = User.objects.create_user(username=username, password="demo123!", email=f"{username.lower()}@example.com")
-        Profile.objects.get_or_create(user=u, defaults={"first_name": username, "last_name": "Demo", "email": u.email})
-
-    user = authenticate(request, username=username, password="demo123!")
-    if user is not None:
-        login(request, user)
-        return redirect("feed:home")
-    # Fallback
-    return redirect("login")
